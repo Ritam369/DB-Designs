@@ -1,0 +1,81 @@
+title Insta THRIFT Creator Store
+customer [icon: user, color: Green]{
+  id SERIAL PK
+  name VARCHAR(50) NOT NULL
+  phone VARCHAR(15) UNIQUE NOT NULL
+  email VARCHAR(322) UNIQUE NOT NULL
+  instagram_handle VARCHAR(50) UNIQUE NOT NULL
+  address text NOT NULL
+}
+products [icon: shopping-bag, color: Purple]{
+  id SERIAL PK
+  name VARCHAR NOT NULL
+  description VARCHAR
+  product_type CHECK(IN 'thrifted', 'handmade')
+  category CHECK(IN 'Tops', 'Bottoms', 'Accessories', 'Home', 'Jewelry')
+  price INT NOT NULL
+  size CHECK(IN 'XS', 'S', 'M', 'L', 'XL', Free_Size)
+  colour VARCHAR(30) CHECK(IN array) NULL
+  condition CHECK(IN array)
+  image_url TEXT
+  video_url TEXT
+  isActive BOOLEAN DEFAULT TRUE
+}
+
+inventory[icon:shopping-bag, color: White]{
+  id SERIAL PK
+  productId INT FK NOT NULL
+  quantity_available INT DEFAULT 1
+  last_updated timestamp DEFAULT now() 
+}
+
+orders[icon: shopping-cart, color: Blue] {
+  id SERIAL PK
+  customer_id INT FK NOT NULL
+  order_date timestamp
+  total_amount INT NOT NULL
+  rating INT NULL 
+}
+
+order_items[icon:dart, color: Yellow] {
+  id SERIAL PK
+  orderId INT FK NOT NULL
+  productId INT FK NOT NULL
+  quantity INT NOT NULL DEFAULT 1
+  unit_price INT NOT NULL
+}
+
+payments[icon: google-pay, color: Red]{
+  id SERIAL PK
+  orderId INT FK NOT NULL
+  payment_method CHECK(IN 'UPI', 'Card', 'COD')
+  amount_paid INT NOT NULL
+  payment_status CHECK(IN 'Pending', 'Paid', 'Failed')
+  payment_date timestamp DEFAULT NOW()
+}
+
+shipping[icon: car, color: Orange]{
+  id SERIAL PK
+  orderId INT FK NOT NULL
+  shipping_address string NOT NULL
+  shipping_status CHECK(IN 'confirmed', 'out_for_delivery' ,'delivered')
+  
+}
+
+// 1 Customer can place Many Orders on the same day and different day also
+customer.id < orders.customer_id
+
+// 1 Order TO Many Order Items
+orders.id < order_items.orderId 
+
+// 1 Product to Many Order Items
+products.id < order_items.productId
+
+// 1 Product to 1 Inventory Record
+products.id - inventory.productId
+
+// 1 Order to 1 Payment (One order will only ever have exactly ONE row in the payments table.) 
+orders.id - payments.orderId
+
+// 1 Order to 1 Shipping Record
+orders.id - shipping.orderId
