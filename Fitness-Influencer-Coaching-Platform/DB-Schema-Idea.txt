@@ -1,0 +1,233 @@
+title Fitness Influencer Coaching Platform
+
+Trainer [icon: user, color: blue] {
+  trainer_id serial pk
+  name VARCHAR NOT NULL
+  email VARCHAR NOT NULL
+  phone VARCHAR NOT NULL
+  bio VARCHAR
+  specialization VARCHAR
+  profile_photo_url TEXT
+  onboard_date date
+}
+
+Client [icon: user, color: green] {
+  client_id serial pk
+  name VARCHAR NOT NULL
+  email VARCHAR NOT NULL
+  phone VARCHAR NOT NULL
+  date_of_birth date NOT NULL
+  gender VARCHAR enum()
+  onboard_date date
+  profile_photo_url TEXT
+  assigned_trainer_id VARCHAR fk
+}
+
+// PlanType is a menu of services the platform offers
+PlanType [icon: list, color: yellow] {
+  plan_type_id serial pk
+  type_name VARCHAR
+  description VARCHAR
+}
+
+//The client enroled in which service
+Enrollment [icon: file-text, color: orange] {
+  enrollment_id serial pk
+  client_id serial fk
+  plan_type_id serial fk
+  status VARCHAR enum()
+}
+
+Consultation [icon: phone, color: purple] {
+  consultation_id serial pk
+  enrollment_id serial fk
+  trainer_id serial fk
+  client_id serial fk
+  scheduled_at datetime
+  duration_minutes int
+  platform VARCHAR
+  status VARCHAR enum()
+  notes VARCHAR
+}
+
+//CoachingPlan is a personal plan built for one client (trainer customizes per person)
+CoachingPlan [icon: calendar, color: red] {
+  coaching_plan_id serial pk
+  enrollment_id serial fk
+  trainer_id serial fk
+  client_id serial fk
+  plan_name VARCHAR
+  description VARCHAR
+  duration_weeks int
+  price float
+  created_at datetime
+}
+
+LiveSession [icon: video, color: cyan] {
+  session_id serial pk
+  enrollment_id serial fk
+  trainer_id serial fk
+  title VARCHAR
+  scheduled_at datetime
+  duration_minutes int
+  platform VARCHAR
+  batch_size int
+  status VARCHAR enum()
+}
+
+//LiveSessionAttendance table and each row represents each customer
+LiveSessionAttendance [icon: users, color: cyan] {
+  attendance_id serial pk
+  session_id serial fk
+  client_id serial fk
+  joined_at datetime
+  attended boolean
+}
+
+Guidance [icon: book, color: pink] {
+  guidance_id serial pk
+  enrollment_id serial fk
+  trainer_id serial fk
+  client_id serial fk
+  workout_plan TEXT
+  diet_plan TEXT
+  notes VARCHAR
+  created_at datetime
+  updated_at datetime
+}
+
+//submited by the client
+CheckIn [icon: check-circle, color: green] {
+  checkin_id serial pk
+  client_id serial fk
+  submitted_at datetime
+  week_number int
+  energy_level int
+  sleep_quality int
+  notes VARCHAR
+  photos_url TEXT
+}
+
+ClientProgress [icon: trending-up, color: green] {
+  progress_id serial pk
+  client_id serial fk
+  checkin_id serial fk
+  recorded_at datetime
+  weight_kg float
+  body_fat_percent float
+  chest_cm float
+  waist_cm float
+  hips_cm float
+  arms_cm float
+  notes VARCHAR
+}
+
+//Given by trainer to each checkin of client
+TrainerFeedback [icon: message-circle, color: blue] {
+  feedback_id serial pk
+  checkin_id serial fk
+  trainer_id serial fk
+  client_id serial fk
+  feedback_text TEXT
+  given_at datetime
+}
+
+Payment [icon: credit-card, color: yellow] {
+  payment_id serial pk
+  client_id serial fk
+  enrollment_id serial fk
+  amount int
+  payment_date datetime
+  payment_method VARCHAR
+  status VARCHAR enum()
+  transaction_id TEXT
+}
+
+//giveen by client to trainer 
+Review [icon: star, color: orange] {
+  review_id serial pk
+  client_id serial fk
+  trainer_id serial fk
+  rating int
+  review_text TEXT
+  created_at datetime
+}
+
+
+// RELATIONSHIPS
+
+Trainer.trainer_id - Client.assigned_trainer_id
+
+
+// Client can enroll into multiple plans
+Client.client_id < Enrollment.client_id
+
+
+// Multiple enrolments can be done via oone plantype
+PlanType.plan_type_id < Enrollment.plan_type_id
+
+
+
+// Enrollment points to specific plan tables
+Enrollment.enrollment_id - Consultation.enrollment_id
+Enrollment.enrollment_id - CoachingPlan.enrollment_id
+Enrollment.enrollment_id - LiveSession.enrollment_id
+Enrollment.enrollment_id - Guidance.enrollment_id
+
+
+
+// Trainer conducts each plan type
+Trainer.trainer_id < Consultation.trainer_id
+Trainer.trainer_id < CoachingPlan.trainer_id
+Trainer.trainer_id < LiveSession.trainer_id
+Trainer.trainer_id < Guidance.trainer_id
+
+
+
+// CoachingPlan, Consultation and Guidance directly assigned to Client
+Client.client_id - CoachingPlan.client_id
+Client.client_id - Guidance.client_id
+Client.client_id - Consultation.client_id
+
+
+
+// One live session can have many clients attending it
+LiveSession.session_id < LiveSessionAttendance.session_id
+
+//One client can join mulltiple live sessions if permitted
+Client.client_id < LiveSessionAttendance.client_id
+
+// Multiple CheckIns will be submitted by Client
+Client.client_id < CheckIn.client_id
+
+
+// ClientProgress directly linked to CheckIn
+CheckIn.checkin_id - ClientProgress.checkin_id
+
+//A client submits their measurements multiple times over their journey — every week. Each submission is a new row in ClientProgress.
+Client.client_id < ClientProgress.client_id
+
+
+
+// TrainerFeedback in response to CheckIn directly
+CheckIn.checkin_id - TrainerFeedback.checkin_id
+
+//One trainer can give multiple feedback
+Trainer.trainer_id < TrainerFeedback.trainer_id
+
+// Every time a client submits a check-in, the trainer writes feedback in response. Since a client checks in every week, there will be many feedback records tied to the same client over time.
+Client.client_id < TrainerFeedback.client_id
+
+
+
+// Multiple payments possible
+Client.client_id < Payment.client_id
+
+
+Enrollment.enrollment_id - Payment.enrollment_id
+
+// Client reviews Trainer multiple times
+Client.client_id < Review.client_id
+
+//As a trainer trains multiple clients, so multiple clients can give review on one trainer
+Trainer.trainer_id < Review.trainer_id
