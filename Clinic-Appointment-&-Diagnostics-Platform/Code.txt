@@ -1,0 +1,115 @@
+title Clinic Appointment and Diagnostics Platform
+
+
+Patient [color: Green] {
+  patient_id serial pk
+  first_name varchar(30) NOT NULL
+  last_name varchar(30)
+  date_of_birth date
+  gender VARCHAR(2) enum('M','F')
+  phone_number VARCHAR(15)
+  email VARCHAR(322)
+  address TEXT
+  created_at timestamp
+  updated_at timestamp
+}
+
+Doctor [color: Green] {
+  doctor_id serial pk
+  first_name varchar(30) NOT NULL
+  last_name varchar(30)
+  departments varchar(40) enum('Cardiology', 'General Medicine', 'Orthopedics', 'Pediatrics', 'Radiology')
+  bio TEXT
+  experience_years int
+  qualification varchar(50)
+  phone_number varchar(15)
+  email varchar(322)
+  license_number varchar()
+  consultation_fee int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Appointment [color: Yellow] {
+  appointment_id serial pk
+  patient_id serial fk
+  doctor_id serial fk
+  appointment_datetime timestamp
+  status varchar(25) enum('Scheduled', 'Confirmed', 'Cancelled', 'No_Show', 'Completed')
+  reason_for_visit TEXT
+  booked_at timestamp
+  updated_at timestamp
+}
+
+Consultation [color: Orange] {
+  consultation_id serial pk
+  appointment_id serial fk
+  doctor_id serial fk
+  consultation_datetime timestamp
+  doctor_fee int //Even if the doctor later changes his fee, the old payment amount remains correct historically.
+  notes TEXT
+  diagnosis TEXT
+  follow_up_recommended boolean
+  created_at timestamp
+  updated_at timestamp
+}
+
+Test [color: Purple] {
+  test_id serial pk
+  consultation_id serial fk
+  test_name varchar(40)
+  description TEXT
+  prescribed_date timestamp
+  status varchar(25) enum('Prescribed', 'Sample Collected', 'In Lab', 'Completed')
+  fee int
+  created_at timestamp
+  updated_at timestamp
+}
+
+Report [color: Blue] {
+  report_id serial pk
+  test_id serial fk
+  report_date timestamp
+  report_details TEXT
+  findings_summary TEXT
+  reviewed_by_doctor_id serial fk
+  created_at timestamp
+  updated_at timestamp
+}
+
+Payment [color: Red] {
+  payment_id serial pk
+  consultation_id serial fk
+  amount int // amount = Consultation.doctor_fee + SUM(Test.fee WHERE Test.consultation_id = Payment.consultation_id)
+  payment_date timestamp
+  payment_method varchar(20) enum('Cash', 'Card', 'UPI', 'Insurance')
+  status varchar(25) enum('Pending', 'Paid', 'Refunded', 'Partially Paid')
+  notes TEXT
+  created_at timestamp
+}
+
+// RELATIONSHIPS
+
+// One patient can book many appointments
+Appointment.patient_id > Patient.patient_id
+
+// One doctor can have many appointments
+Appointment.doctor_id > Doctor.doctor_id
+
+// One appointment can result in at most one consultation
+Consultation.appointment_id - Appointment.appointment_id
+
+// Many consultations can be done by one doctor.
+Consultation.doctor_id > Doctor.doctor_id
+
+// One consultation can prescribe one or more tests
+Test.consultation_id > Consultation.consultation_id
+
+// A report belongs to exactly one test.
+Report.test_id - Test.test_id
+
+// One consultation can have at most one payment record
+Consultation.consultation_id - Payment.consultation_id
+
+// One doctor can review many reports.
+Report.reviewed_by_doctor_id > Doctor.doctor_id
