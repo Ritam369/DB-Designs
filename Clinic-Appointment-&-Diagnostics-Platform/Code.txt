@@ -6,10 +6,10 @@ Patient [color: Green] {
   first_name varchar(30) NOT NULL
   last_name varchar(30)
   date_of_birth date
-  gender VARCHAR(2) enum('M','F')
-  phone_number VARCHAR(15)
-  email VARCHAR(322)
-  address TEXT
+  gender varchar(2) enum('M','F')
+  phone_number varchar(15)
+  email varchar(322)
+  address text
   created_at timestamp
   updated_at timestamp
 }
@@ -19,24 +19,35 @@ Doctor [color: Green] {
   first_name varchar(30) NOT NULL
   last_name varchar(30)
   departments varchar(40) enum('Cardiology', 'General Medicine', 'Orthopedics', 'Pediatrics', 'Radiology')
-  bio TEXT
+  bio text
   experience_years int
   qualification varchar(50)
   phone_number varchar(15)
   email varchar(322)
-  license_number varchar()
+  license_number varchar(50)
   consultation_fee int
   created_at timestamp
   updated_at timestamp
 }
 
-Appointment [color: Yellow] {
+DoctorAvailability [color: Yellow] {
+  availability_id serial pk
+  doctor_id serial fk
+  day_of_week varchar(10) enum('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
+  start_time timestamp
+  end_time timestamp
+  is_available boolean default true
+  created_at timestamp
+  updated_at timestamp
+}
+
+Appointment [color: Orange] {
   appointment_id serial pk
   patient_id serial fk
   doctor_id serial fk
   appointment_datetime timestamp
   status varchar(25) enum('Scheduled', 'Confirmed', 'Cancelled', 'No_Show', 'Completed')
-  reason_for_visit TEXT
+  reason_for_visit text
   booked_at timestamp
   updated_at timestamp
 }
@@ -46,32 +57,33 @@ Consultation [color: Orange] {
   appointment_id serial fk
   doctor_id serial fk
   consultation_datetime timestamp
-  doctor_fee int //Even if the doctor later changes his fee, the old payment amount remains correct historically.
-  notes TEXT
-  diagnosis TEXT
+  doctor_fee int // Even if the doctor later changes his fee, the old payment amount remains correct historically.
+  notes text
+  diagnosis text
   follow_up_recommended boolean
   created_at timestamp
   updated_at timestamp
 }
 
-Test [color: Purple] {
+Test [color: Blue] {
   test_id serial pk
   consultation_id serial fk
   test_name varchar(40)
-  description TEXT
+  description text
   prescribed_date timestamp
   status varchar(25) enum('Prescribed', 'Sample Collected', 'In Lab', 'Completed')
   fee int
+  performed_in_clinic boolean default true // true if test done in clinic (affects payment), false if done externally / other centre
   created_at timestamp
   updated_at timestamp
 }
 
-Report [color: Blue] {
+Report [color: Purple] {
   report_id serial pk
   test_id serial fk
   report_date timestamp
-  report_details TEXT
-  findings_summary TEXT
+  report_details text
+  findings_summary text
   reviewed_by_doctor_id serial fk
   created_at timestamp
   updated_at timestamp
@@ -80,15 +92,15 @@ Report [color: Blue] {
 Payment [color: Red] {
   payment_id serial pk
   consultation_id serial fk
-  amount int // amount = Consultation.doctor_fee + SUM(Test.fee WHERE Test.consultation_id = Payment.consultation_id)
+  amount int // amount = Consultation.doctor_fee + SUM(Test.fee WHERE Test.consultation_id = Payment.consultation_id AND Test.performed_in_clinic = true)
   payment_date timestamp
   payment_method varchar(20) enum('Cash', 'Card', 'UPI', 'Insurance')
   status varchar(25) enum('Pending', 'Paid', 'Refunded', 'Partially Paid')
-  notes TEXT
+  notes text
   created_at timestamp
 }
 
-// RELATIONSHIPS
+//  RELATIONSHIPS 
 
 // One patient can book many appointments
 Appointment.patient_id > Patient.patient_id
@@ -99,17 +111,20 @@ Appointment.doctor_id > Doctor.doctor_id
 // One appointment can result in at most one consultation
 Consultation.appointment_id - Appointment.appointment_id
 
-// Many consultations can be done by one doctor.
+// Many consultations can be done by one doctor
 Consultation.doctor_id > Doctor.doctor_id
 
 // One consultation can prescribe one or more tests
 Test.consultation_id > Consultation.consultation_id
 
-// A report belongs to exactly one test.
+// A report belongs to exactly one test
 Report.test_id - Test.test_id
+
+// One doctor can review many reports
+Report.reviewed_by_doctor_id > Doctor.doctor_id
 
 // One consultation can have at most one payment record
 Consultation.consultation_id - Payment.consultation_id
 
-// One doctor can review many reports.
-Report.reviewed_by_doctor_id > Doctor.doctor_id
+// One doctor can have multiple availability slots (weekdays + timings)
+DoctorAvailability.doctor_id > Doctor.doctor_id
