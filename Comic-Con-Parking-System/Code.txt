@@ -1,0 +1,101 @@
+title Comic-Con Parking System
+
+
+VehicleType [icon: truck, color: orange] {
+  vehicle_type_id serial pk
+  type_name varchar(5) enum(('Bike', 'Car', 'SUV', 'Cab', 'EV'))
+  description text
+  created_at timestamp
+} //Categories for allowed vehicles
+
+ReservationCategory [icon: tag, color: purple] {
+  category_id serial pk 
+  category_name varchar(20) enum('General', 'CosplayerWithProps', 'Exhibitor', 'Creator', 'VIPGuest', 'Staff', 'EVCharging')
+  description text
+  is_special_reserved boolean default false
+}
+
+Vehicle [icon: car, color: blue] {
+  vehicle_id serial pk
+  license_plate varchar(15) unique
+  vehicle_type_id int fk
+  which_model varchar
+  color varchar
+  created_at timestamp
+} //Uniques vehicle record that entered
+
+ParkingZone [icon: map-pin, color: teal] {
+  zone_id serial pk
+  zone_name varchar(25)
+  description text
+  total_levels int
+  reservation_category_id int fk //there can be separate zone for reserved (It can be NULL)
+}
+
+ParkingSpot [icon: square, color: emerald] {
+  spot_id serial pk
+  zone_id int fk
+  level varchar(5)
+  spot_number varchar(5)
+  vehicle_type_id int fk
+  reservation_category_id int fk //if it's a reserved zone then you can think this as strict checker and if it's not then you can think this as one zone can have reserved spots.
+}
+
+ParkingTicket [icon: ticket, color: rose] {
+  ticket_id serial pk
+  ticket_number varchar unique
+  vehicle_id int fk
+  spot_id int fk
+  reservation_category_id int fk
+  entry_timestamp timestamp
+  issued_by varchar(25)
+}
+
+ParkingSession [icon: clock, color: amber] {
+  session_id serial pk
+  ticket_id int fk unique
+  exit_timestamp timestamp
+  duration_minutes int
+}
+
+Payment [icon: credit-card, color: green] {
+  payment_id serial pk
+  session_id int fk
+  amount decimal(10,2)
+  payment_timestamp timestamp
+  payment_method varchar
+  status varchar enum('Pending','Paid','Failed','Refunded')
+  transaction_ref varchar
+}
+
+// Relationships
+
+//there can be many vehicles of one certain type
+VehicleType.vehicle_type_id < Vehicle.vehicle_type_id
+
+//Many vehicles of a particular type can be in a parking spot. Possibilty that Some spots are designed only for bikes, some only for cars, some for large SUVs
+VehicleType.vehicle_type_id < ParkingSpot.vehicle_type_id
+
+//One Reservation Category can be assigned to many Parking Zones. Though ParkingZone.reservation_category_id can be NULL as some zones may not be reserved for any special category (general).
+ReservationCategory.category_id < ParkingZone.reservation_category_id
+
+//One Reservation Category can be applied to many Parking Spots (it can be a general category)
+ReservationCategory.category_id < ParkingSpot.reservation_category_id
+
+//One Reservation Category can be claimed in many Parking Tickets
+ReservationCategory.category_id < ParkingTicket.reservation_category_id
+
+//One Parking Zone can have many Parking Spots
+ParkingZone.zone_id < ParkingSpot.zone_id
+
+//One Vehicle can have many Parking Tickets (over time as different days, different spots, many tickets possible)
+Vehicle.vehicle_id < ParkingTicket.vehicle_id
+
+//One Parking Spot can be used in many Parking Tickets (at different times)
+ParkingSpot.spot_id < ParkingTicket.spot_id
+
+//Only one session possible under one ticket
+ParkingTicket.ticket_id - ParkingSession.ticket_id
+
+//One Parking Session has exactly one Payment record
+ParkingSession.session_id - Payment.session_id
