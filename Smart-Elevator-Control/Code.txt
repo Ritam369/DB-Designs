@@ -1,0 +1,144 @@
+title Smart Elevator Control
+
+
+Building [icon: building, color: green] {
+  building_id serial pk
+  name varchar(100)
+  address text
+  city varchar(50)
+  total_floors int
+  created_at timestamp
+}
+
+// Zone is for grouping of elevators inside a building. One building has many zones.
+Zone [icon: layers, color: blue] {
+  zone_id serial pk
+  building_id int fk
+  name varchar(50) enum('Low Zone', 'Mid Zone', 'High Zone')
+  description text
+}
+
+
+Floor [icon: map-pin, color: blue] {
+  floor_id serial pk
+  building_id int fk
+  floor_number int
+  floor_name varchar(30) enum('Ground', 'Mezzanine', 'Terrace')
+}
+
+
+ElevatorShaft [icon: box, color: blue] {
+  shaft_id serial pk
+  building_id int fk
+  shaft_number varchar(20) enum('Shaft A','Shaft B')
+}
+
+
+Elevator [icon: arrow-up-down, color: red] {
+  elevator_id serial pk
+  shaft_id int fk
+  zone_id int fk
+  model varchar(50)
+  capacity_kg decimal(6,2)
+  max_passengers int
+  installation_date date
+  updated_at timestamp
+}
+
+ 
+// composite primary key
+ElevatorFloorService [icon: link, color: purple] {
+  elevator_id int fk
+  floor_id int fk
+}
+
+
+FloorRequest [icon: message-circle, color: yellow] {
+  request_id serial pk
+  origin_floor_id int fk
+  destination_floor_id int fk
+  request_timestamp timestamp
+  status varchar(15) enum('pending', 'assigned', 'completed', 'cancelled')
+  request_type varchar(20) enum('hall_call', 'car_call')
+}
+
+
+RideAssignment [icon: check-circle, color: orange] {
+  assignment_id serial pk
+  request_id int fk
+  elevator_id int fk
+  assigned_timestamp timestamp
+  assignment_status varchar(20) enum('active', 'completed', 'cancelled', 'reassigned')
+}
+
+// RideLog: Complete trip history for analytics
+RideLog [icon: file-text, color: orange] {
+  log_id serial pk
+  assignment_id int fk
+  elevator_id int fk
+  origin_floor_id int fk
+  destination_floor_id int fk
+  start_time timestamp
+  end_time timestamp
+  passenger_count int
+  load_kg decimal(6,2)
+}
+
+
+// Realtime elevator status
+ElevatorStatus [icon: activity, color: red] {
+  status_id serial pk
+  elevator_id int fk
+  current_status varchar(25) enum('idle', 'moving_up', 'moving_down', 'doors_open', 'maintenance', 'out_of_service', 'overload')
+  current_floor int
+  current_load_kg decimal(6,2)
+  current_passenger_count int
+  last_weight_update_timestamp timestamp
+  status_timestamp timestamp
+}
+
+
+MaintenanceRecord [icon: wrench, color: Yellow] {
+  maintenance_id serial pk
+  elevator_id int fk
+  start_date date
+  end_date date
+  maintenance_type varchar(20) enum('scheduled', 'breakdown', 'inspection', 'repair')
+  description text
+  status varchar(20) enum('open', 'in_progress', 'closed')
+  closed_at timestamp
+}
+
+// One Building has many Zones
+Zone.building_id > Building.building_id
+
+// One Building has many Floors
+Floor.building_id > Building.building_id
+
+// One Building has many ElevatorShafts
+ElevatorShaft.building_id > Building.building_id
+
+// One Zone groups many Elevators
+Elevator.zone_id > Zone.zone_id
+
+// RelationshiOne ElevatorShaft has exactly one Elevator
+Elevator.shaft_id - ElevatorShaft.shaft_id
+
+// One Elevator can go to many Floors & one Floor can can have many Elevators 
+ElevatorFloorService.elevator_id > Elevator.elevator_id
+ElevatorFloorService.floor_id > Floor.floor_id
+
+// One request can be assigned (and re-assigned) multiple times
+RideAssignment.request_id > FloorRequest.request_id
+
+// Every completed ride has exactly one assignment record
+RideLog.assignment_id - RideAssignment.assignment_id
+
+// One Elevator has many RideLogs
+RideLog.elevator_id > Elevator.elevator_id
+
+// One Elevator has many ElevatorStatus records
+ElevatorStatus.elevator_id > Elevator.elevator_id
+
+// One Elevator has many MaintenanceRecords
+MaintenanceRecord.elevator_id > Elevator.elevator_id
